@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Packaging Admin Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
+        .login-box { text-align: center; margin-top: 100px; }
+        .dashboard { display: none; }
+        table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
+        th { background: #333; color: white; }
+        .btn-shipped { background: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <!-- Login Section -->
+    <div class="login-box" id="loginSection">
+        <h2>Admin Login</h2>
+        <input type="password" id="adminPwd" placeholder="Enter Admin Password">
+        <button onclick="loadOrders()">Login</button>
+        <p id="loginError" style="color: red;"></p>
+    </div>
+
+    <!-- Dashboard Section -->
+    <div class="dashboard" id="dashboardSection">
+        <h2>Packaging Team Dashboard</h2>
+        <button onclick="location.reload()" style="margin-bottom:10px;">Refresh Orders</button>
+        <table id="ordersTable">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Product</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="ordersBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        let adminPassword = "";
+
+        async function loadOrders() {
+            adminPassword = document.getElementById('adminPwd').value;
+            const errorMsg = document.getElementById('loginError');
+            
+            const response = await fetch('/api/get-orders', {
+                headers: { 'admin-password': adminPassword }
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                document.getElementById('loginSection').style.display = "none";
+                document.getElementById('dashboardSection').style.display = "block";
+                
+                const tbody = document.getElementById('ordersBody');
+                tbody.innerHTML = "";
+                
+                result.orders.forEach(order => {
+                    // Sirf Pending orders ko update karne ka option dein
+                    const actionBtn = order.status === "Pending" 
+                        ? `<button class="btn-shipped" onclick="markShipped('${order.id}')">Mark Shipped</button>` 
+                        : `<span>${order.status}</span>`;
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${order.id}</td>
+                            <td>${order.productId}</td>
+                            <td>₹${order.finalPrice}</td>
+                            <td>${order.status}</td>
+                            <td>${actionBtn}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                errorMsg.innerText = result.error;
+            }
+        }
+
+        async function markShipped(orderId) {
+            if(!confirm("Order ko Shipped mark karna chahte hain?")) return;
+
+            const response = await fetch('/api/update-order', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'admin-password': adminPassword 
+                },
+                body: JSON.stringify({ orderId: orderId, newStatus: "Shipped" })
+            });
+
+            if (response.ok) {
+                alert("Order Shipped!");
+                loadOrders(); // Table refresh karein
+            } else {
+                alert("Error updating order");
+            }
+        }
+    </script>
+</body>
+</html>
