@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Order</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .track-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; width: 300px; }
+        input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 5px; width: 100%; }
+        button:hover { background-color: #0056b3; }
+        #resultArea { margin-top: 20px; text-align: left; display: none; background: #eef; padding: 10px; border-radius: 5px; }
+        .status-badge { font-weight: bold; color: white; padding: 3px 8px; border-radius: 3px; background: orange; }
+    </style>
+</head>
+<body>
+    <div class="track-card">
+        <h2>Track Your Order</h2>
+        <p>WhatsApp par mila Order ID daalein</p>
+        <input type="text" id="orderIdInput" placeholder="Enter Order ID...">
+        <button onclick="fetchOrderStatus()">Check Status</button>
+        
+        <div id="resultArea">
+            <p><strong>Status:</strong> <span id="displayStatus" class="status-badge"></span></p>
+            <p><strong>Final Price:</strong> ₹<span id="displayPrice"></span></p>
+            <p><strong>Product ID:</strong> <span id="displayProductId"></span></p>
+        </div>
+        <p id="errorMessage" style="color: red; margin-top: 10px;"></p>
+    </div>
+
+    <script>
+        async function fetchOrderStatus() {
+            const orderId = document.getElementById('orderIdInput').value;
+            const errorMsg = document.getElementById('errorMessage');
+            const resultArea = document.getElementById('resultArea');
+            
+            errorMsg.innerText = "";
+            resultArea.style.display = "none";
+
+            if(!orderId) {
+                errorMsg.innerText = "Please enter an Order ID.";
+                return;
+            }
+
+            try {
+                // Vercel backend API ko call karna
+                const response = await fetch(`/api/track-order?orderId=${orderId}`);
+                const result = await response.json();
+
+                if(response.ok) {
+                    // Data milne par HTML me show karna
+                    document.getElementById('displayStatus').innerText = result.orderData.status;
+                    document.getElementById('displayPrice').innerText = result.orderData.finalPrice;
+                    document.getElementById('displayProductId').innerText = result.orderData.productId;
+                    resultArea.style.display = "block";
+                    
+                    // Status ke hisaab se color change karein
+                    const statusBadge = document.getElementById('displayStatus');
+                    if(result.orderData.status === "Shipped") statusBadge.style.background = "blue";
+                    if(result.orderData.status === "Delivered") statusBadge.style.background = "green";
+                } else {
+                    errorMsg.innerText = result.error;
+                }
+            } catch (error) {
+                errorMsg.innerText = "Network issue. Please try again later.";
+            }
+        }
+    </script>
+</body>
+</html>
